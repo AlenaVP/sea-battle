@@ -1,6 +1,19 @@
-import { httpServer } from "./http_server/index.js";
+import { WebSocketServer, WebSocket } from 'ws';
+import { WS_PORT } from './constants.js';
 
-const HTTP_PORT = 8181;
+const wss = new WebSocketServer({ port: WS_PORT });
 
-console.log(`Start static http server on the ${HTTP_PORT} port!`);
-httpServer.listen(HTTP_PORT);
+wss.on('connection', (ws: WebSocket) => {
+  console.log('New client connected');
+
+  ws.on('message', (message) => {
+    console.log(`Received message: ${message}`);
+    ws.send(`Echo: ${message}`);
+  });+
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  });
+});
+
+console.log(`WebSocket server is running on ws://localhost:${WS_PORT}`);
