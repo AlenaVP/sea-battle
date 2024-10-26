@@ -14,22 +14,30 @@ export interface AddPlayerResult {
   errorText: string,
 }
 
-export interface RegistrationRequest {
-  type: 'reg';
+export class RegistrationRequest implements Message {
+  type: string = 'reg';
   data: {
     name: string;
     password: string;
   };
-  id: 0;
+  id: number = 0;
+
+  constructor(name: string, password: string) {
+    this.data = { name, password };
+  }
 }
 
-export interface RegistrationResponse {
-  type: 'reg';
+export class RegistrationResponse implements Message {
+  type: string = 'reg';
   data: {
     name: string;
     index: number | string;
     error: boolean;
     errorText: string;
   };
-  id: 0;
+  id: number = 0;
+
+  constructor(name: string, index: number | string, error: boolean, errorText: string) {
+    this.data = { name, index, error, errorText };
+  }
 }
