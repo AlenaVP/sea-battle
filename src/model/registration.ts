@@ -38,18 +38,6 @@ export class CreateRoomRequest implements Message {
   id: number = 0;
 }
 
-export class CreateRoomResponse implements Message {
-  type: string = 'create_room';
-  data: {
-    roomId: number | string;
-  };
-  id: number = 0;
-
-  constructor(roomId: number | string) {
-    this.data = { roomId };
-  }
-}
-
 export class AddUserToRoomRequest implements Message {
   type: string = 'add_user_to_room';
   data: {

@@ -3,13 +3,22 @@ import { WebSocket } from 'ws';
 import { AddPlayerResult, Player, Room } from './model/registration.js';
 import { CustomWebSocket } from './types.js';
 
+const clients: WebSocket[] = [];
 const players = new Map<string, Player>();
 const rooms = new Map<string, Room>();
-const clients: WebSocket[] = [];
+const availableRooms = new Map<string, Room>();
 
 export const db = {
   players,
   rooms,
+
+  addClient: (client: CustomWebSocket): void => {
+    clients.push(client);
+  },
+
+  getAllClients: (): CustomWebSocket[] => {
+    return clients;
+  },
 
   addPlayer: (name: string, password: string): AddPlayerResult => {
     if (players.has(name)) {
@@ -30,6 +39,9 @@ export const db = {
   // Room
   addRoom: (room: Room): void => {
     rooms.set(String(room.roomId), room);
+    if (room.roomUsers.length < 2) {
+      availableRooms.set(String(room.roomId), room);
+    }
   },
 
   getRoom: (id: string): Room | undefined => {
@@ -38,17 +50,26 @@ export const db = {
 
   removeRoom: (id: string): void => {
     rooms.delete(id);
+    availableRooms.delete(id);
+  },
+
+  removeRoomFromAvailables: (id: string): void => {
+    availableRooms.delete(id);
+  },
+
+  getRoomUserListSize(room: Room): number {
+    return room.roomUsers.length;
   },
 
   getAllRooms: (): Room[] => {
     return Array.from(rooms.values());
   },
 
-  addClient: (client: CustomWebSocket): void => {
-    clients.push(client);
+  getAllAvailableRooms: (): Room[] => {
+    return Array.from(availableRooms.values());
   },
 
-  getAllClients: (): CustomWebSocket[] => {
-    return clients;
+  addPlayerToRoom: (room: Room, playerName: string): void => {
+    room?.roomUsers.push({ name: playerName, index: playerName });
   },
 };
