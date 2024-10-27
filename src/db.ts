@@ -1,9 +1,23 @@
-import { AddPlayerResult, Player } from './model/registration.js';
+import { WebSocket } from 'ws';
 
+import { AddPlayerResult, Player, Room } from './model/registration.js';
+import { CustomWebSocket } from './types.js';
+
+const clients: WebSocket[] = [];
 const players = new Map<string, Player>();
+const rooms = new Map<string, Room>();
 
 export const db = {
   players,
+  rooms,
+
+  addClient: (client: CustomWebSocket): void => {
+    clients.push(client);
+  },
+
+  getAllClients: (): CustomWebSocket[] => {
+    return clients;
+  },
 
   addPlayer: (name: string, password: string): AddPlayerResult => {
     if (players.has(name)) {
@@ -19,5 +33,34 @@ export const db = {
 
   getAllPlayers: (): Player[] => {
     return Array.from(players.values());
+  },
+
+  // Room
+  addRoom: (room: Room): void => {
+    rooms.set(String(room.roomId), room);
+  },
+
+  getRoom: (id: string): Room | undefined => {
+    return rooms.get(id);
+  },
+
+  removeRoom: (id: string): void => {
+    rooms.delete(id);
+  },
+
+  getRoomUserListSize(room: Room): number {
+    return room.roomUsers.length;
+  },
+
+  getAllRooms: (): Room[] => {
+    return Array.from(rooms.values());
+  },
+
+  isRoomHasPlayer: (room: Room, playerName: string): boolean => {
+    return room.roomUsers.findIndex((p) => playerName === p.name) > -1;
+  },
+
+  addPlayerToRoom: (room: Room, playerName: string): void => {
+    room?.roomUsers.push({ name: playerName, index: playerName });
   },
 };
