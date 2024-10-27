@@ -1,6 +1,7 @@
 import { CustomWebSocket } from '../../types.js';
 import { db } from '../../db.js';
-import { Message } from '../../model/message.js';
+import { sendErrorMessage, sendResponse, sendResponseToAllClients } from '../../utils.js';
+import { Game } from '../../model/game.js';
 import {
   AddPlayerResult,
   AddUserToRoomRequest,
@@ -51,7 +52,7 @@ export const handleRegistration = (ws: CustomWebSocket, message: RegistrationReq
 export const handleCreateRoom = (ws: CustomWebSocket, message: CreateRoomRequest): void => {
   const playerName = ws.playerName;
   if (!playerName) {
-    ws.send(JSON.stringify({ type: 'error', data: { errorText: 'Player not registered' }, id: message.id }));
+    sendErrorMessage(ws, message.id, 'Player not registered');
     return;
   }
 
@@ -75,23 +76,34 @@ export const handleAddUserToRoom = (ws: CustomWebSocket, message: AddUserToRoomR
   if (room) {
     const playerName = ws.playerName;
     if (!playerName) {
-      ws.send(JSON.stringify({ type: 'error', data: { errorText: 'Player not registered' }, id: message.id }));
+      sendErrorMessage(ws, message.id, 'Player not registered');
       return;
     }
 
-    // Add user to the room
     if (db.isRoomHasPlayer(room, playerName)) {
-      ws.send(JSON.stringify({ type: 'error', data: { errorText: 'Player is already in the room' }, id: message.id }));
+      sendErrorMessage(ws, message.id, 'Player is already in the room');
       console.log(`${playerName} is already in the room`);
       return;
     }
     db.addPlayerToRoom(room, playerName);
 
-    // If the room is full, remove it from the available rooms list
     if (db.getRoomUserListSize(room) === 2) {
+      // Create a new game
+      const gameId = room.roomId;
+      const game: Game = {
+        gameId,
+        players: {
+          [room.roomUsers[0].index]: { ships: [], board: Array(10).fill(0).map(() => Array(10).fill(0)) },
+          [room.roomUsers[1].index]: { ships: [], board: Array(10).fill(0).map(() => Array(10).fill(0)) },
+        },
+        currentPlayerIndex: room.roomUsers[0].index,
+      };
+
+      db.addGame(game);
+      console.log(`New Game with 'gameId'='${gameId}' has been created.`);
+
       db.removeRoom(String(room.roomId));
 
-      // Notify both players that the game has started
       room.roomUsers.forEach((user: RoomUser) => {
         const response = new CreateGameResponse(room.roomId, user.index);
         const client = db.getAllClients().find(c => c.playerName === user.name);
@@ -105,20 +117,6 @@ export const handleAddUserToRoom = (ws: CustomWebSocket, message: AddUserToRoomR
     const response = new UpdateRoomResponse(db.getAllRooms());
     sendResponseToAllClients(response);
   } else {
-    ws.send(JSON.stringify({ type: 'error', data: { errorText: 'Room not found' }, id: message.id }));
+    sendErrorMessage(ws, message.id, 'Room not found');
   }
 };
-
-const sendResponse = (ws: CustomWebSocket, response: Message): void => {
-  ws.send(JSON.stringify({
-    type: response.type,
-    data: JSON.stringify(response.data),
-    id: response.id,
-  }));
-}
-
-const sendResponseToAllClients = (response: Message): void => {
-  db.getAllClients().forEach(client => {
-    sendResponse(client, response);
-  });
-}
