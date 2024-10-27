@@ -1,6 +1,6 @@
 import { CustomWebSocket } from '../../types.js';
 import { db } from '../../db.js';
-import { AddShipsToGameBoardRequest, Game, Ship, StartGameResponse } from '../../model/game.js';
+import { AddShipsToGameBoardRequest, AttackFeedback, FinishGame, Game, Ship, StartGameResponse, TurnInfo } from '../../model/game.js';
 import { areAllPlayersReady, sendErrorMessage, sendResponse } from '../../utils.js';
 
 export const handleAddShips = (ws: CustomWebSocket, message: AddShipsToGameBoardRequest): void => {
@@ -80,4 +80,172 @@ export const updateGameBoard = (gameId: string): void => {
       }
     });
   }
+};
+
+export const handleAttack = (ws: CustomWebSocket, message: any): void => {
+  const { gameId, x, y, indexPlayer } = message.data;
+  const game: Game | undefined = db.getGame(gameId);
+
+  if (!game) {
+    sendErrorMessage(ws, message.id, 'Game not found');
+    return;
+  }
+
+  const opponentIndex = Object.keys(game.players).find(key => key !== indexPlayer);
+  if (!opponentIndex) {
+    sendErrorMessage(ws, message.id, 'Opponent not found');
+    return;
+  }
+
+  const opponent = game.players[opponentIndex];
+  const board = opponent.board;
+
+  if (board[x][y] === 1) {
+    board[x][y] = 2; // Hit
+    sendAttackFeedback(gameId, x, y, indexPlayer, 'shot');
+    if (isShipSunk(board, x, y)) {
+      markSurroundingCells(board, x, y);
+      sendAttackFeedback(gameId, x, y, indexPlayer, 'killed');
+      if (isGameOver(board)) {
+        sendFinishMessage(gameId, indexPlayer);
+      }
+    }
+  } else {
+    board[x][y] = 3; // Miss
+    sendAttackFeedback(gameId, x, y, indexPlayer, 'miss');
+  }
+
+  game.currentPlayerIndex = opponentIndex;
+  sendTurnMessage(gameId, opponentIndex);
+};
+
+const sendAttackFeedback = (gameId: string | number, x: number, y: number, currentPlayer: string | number, status: 'miss' | 'killed' | 'shot') => {
+  const game = db.getGame(gameId);
+  if (!game) return;
+
+  const feedback = new AttackFeedback(x, y, currentPlayer, status);
+
+  Object.keys(game.players).forEach(playerIndex => {
+    const client = db.getAllClients().find(c => c.playerName === playerIndex);
+    if (client) {
+      sendResponse(client, feedback);
+    }
+  });
+};
+
+const sendTurnMessage = (gameId: string | number, currentPlayer: string | number) => {
+  const game = db.getGame(gameId);
+  if (!game) return;
+
+  const turnMessage = new TurnInfo(currentPlayer);
+
+  Object.keys(game.players).forEach(playerIndex => {
+    const client = db.getAllClients().find(c => c.playerName === playerIndex);
+    if (client) {
+      sendResponse(client, turnMessage);
+    }
+  });
+};
+
+const sendFinishMessage = (gameId: string | number, winPlayer: string | number) => {
+  const game = db.getGame(gameId);
+  if (!game) return;
+
+  const finishMessage = new FinishGame(winPlayer);
+
+  Object.keys(game.players).forEach(playerIndex => {
+    const client = db.getAllClients().find(c => c.playerName === playerIndex);
+    if (client) {
+      sendResponse(client, finishMessage);
+    }
+  });
+};
+
+const isShipSunk = (board: number[][], x: number, y: number): boolean => {
+  const directions = [
+    { dx: 1, dy: 0 },  // Right
+    { dx: -1, dy: 0 }, // Left
+    { dx: 0, dy: 1 },  // Down
+    { dx: 0, dy: -1 }  // Up
+  ];
+
+  for (const { dx, dy } of directions) {
+    let nx = x;
+    let ny = y;
+
+    while (nx >= 0 && ny >= 0 && nx < board.length && ny < board[0].length && board[nx][ny] === 2) {
+      nx += dx;
+      ny += dy;
+    }
+
+    if (nx >= 0 && ny >= 0 && nx < board.length && ny < board[0].length && board[nx][ny] === 1) {
+      return false; // Part of the ship is not hit
+    }
+  }
+
+  return true; // All parts of the ship are hit
+};
+
+const markSurroundingCells = (board: number[][], x: number, y: number): void => {
+  const directions = [
+    { dx: 1, dy: 0 },  // Right
+    { dx: -1, dy: 0 }, // Left
+    { dx: 0, dy: 1 },  // Down
+    { dx: 0, dy: -1 }, // Up
+    { dx: 1, dy: 1 },  // Down-Right
+    { dx: 1, dy: -1 }, // Up-Right
+    { dx: -1, dy: 1 }, // Down-Left
+    { dx: -1, dy: -1 } // Up-Left
+  ];
+
+  for (const { dx, dy } of directions) {
+    let nx = x + dx;
+    let ny = y + dy;
+
+    while (nx >= 0 && ny >= 0 && nx < board.length && ny < board[0].length && board[nx][ny] !== 1) {
+      if (board[nx][ny] === 0) {
+        board[nx][ny] = 3; // Mark as miss
+      }
+      nx += dx;
+      ny += dy;
+    }
+  }
+};
+
+const isGameOver = (board: number[][]): boolean => {
+  for (let i = 0; i < board.length; i++) {
+    for (let j = 0; j < board[i].length; j++) {
+      if (board[i][j] === 1) {
+        return false; // There are still parts of ships that are not hit
+      }
+    }
+  }
+  return true; // All ships are sunk
+};
+
+export const handleRandomAttack = (ws: CustomWebSocket, message: any): void => {
+  const { gameId, indexPlayer } = message.data;
+  const game: Game | undefined = db.getGame(gameId);
+
+  if (!game) {
+    sendErrorMessage(ws, message.id, 'Game not found');
+    return;
+  }
+
+  const opponentIndex = Object.keys(game.players).find(key => key !== indexPlayer);
+  if (!opponentIndex) {
+    sendErrorMessage(ws, message.id, 'Opponent not found');
+    return;
+  }
+
+  const opponent = game.players[opponentIndex];
+  const board = opponent.board;
+
+  let x, y;
+  do {
+    x = Math.floor(Math.random() * board.length);
+    y = Math.floor(Math.random() * board[0].length);
+  } while (board[x][y] === 2 || board[x][y] === 3);
+
+  handleAttack(ws, { data: { gameId, x, y, indexPlayer }, id: message.id });
 };
