@@ -1,8 +1,4 @@
-export interface Message {
-  type: string;
-  data: any;
-  id: number;
-}
+import { Message } from './message.js';
 
 export class RegistrationRequest implements Message {
   type: string = 'reg';
@@ -83,13 +79,12 @@ export interface AddPlayerResult {
   errorText: string,
 }
 
+export interface RoomUser {
+  name: string,
+  index: number | string,
+}
+
 export interface Room {
   roomId: number | string,
-  roomUsers:
-  [
-    {
-      name: string,
-      index: number | string,
-    }
-  ],
+  roomUsers: RoomUser[],
 }

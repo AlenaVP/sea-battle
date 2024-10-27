@@ -1,6 +1,6 @@
 import { CustomWebSocket } from '../../types.js';
-import { Message } from "../../model/registration.js";
-import { handleAddUserToRoom, handleCreateRoom, handleRegistration } from "./registration.js";
+import { Message } from '../../model/message.js';
+import { handleAddUserToRoom, handleCreateRoom, handleRegistration } from './registration.js';
 
 export const handleMessage = (ws: CustomWebSocket, message: string) => {
   const parsedMessage: Message = JSON.parse(message);

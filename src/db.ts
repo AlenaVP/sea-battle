@@ -6,7 +6,6 @@ import { CustomWebSocket } from './types.js';
 const clients: WebSocket[] = [];
 const players = new Map<string, Player>();
 const rooms = new Map<string, Room>();
-const availableRooms = new Map<string, Room>();
 
 export const db = {
   players,
@@ -39,9 +38,6 @@ export const db = {
   // Room
   addRoom: (room: Room): void => {
     rooms.set(String(room.roomId), room);
-    if (room.roomUsers.length < 2) {
-      availableRooms.set(String(room.roomId), room);
-    }
   },
 
   getRoom: (id: string): Room | undefined => {
@@ -50,11 +46,6 @@ export const db = {
 
   removeRoom: (id: string): void => {
     rooms.delete(id);
-    availableRooms.delete(id);
-  },
-
-  removeRoomFromAvailables: (id: string): void => {
-    availableRooms.delete(id);
   },
 
   getRoomUserListSize(room: Room): number {
@@ -65,8 +56,8 @@ export const db = {
     return Array.from(rooms.values());
   },
 
-  getAllAvailableRooms: (): Room[] => {
-    return Array.from(availableRooms.values());
+  isRoomHasPlayer: (room: Room, playerName: string): boolean => {
+    return room.roomUsers.findIndex((p) => playerName === p.name) > -1;
   },
 
   addPlayerToRoom: (room: Room, playerName: string): void => {
