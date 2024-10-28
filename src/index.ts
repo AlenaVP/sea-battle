@@ -1,6 +1,8 @@
 import { httpServer } from './http_server/index.js';
 import { WebSocketServer, WebSocket, RawData } from 'ws';
+
 import { HTTP_PORT, WS_PORT } from './constants.js';
+import { handleMessage } from './websocket_server/controller/controller.js';
 
 console.log(`Start static http server on the ${HTTP_PORT} port!`);
 httpServer.listen(HTTP_PORT);
@@ -14,11 +16,7 @@ wss.on('connection', (ws: WebSocket) => {
     console.log(`Received message: ${message}`);
     try {
       const parsedMessage = JSON.parse(message.toString());
-      ws.send(JSON.stringify({
-        type: parsedMessage.type,
-        data: parsedMessage.data,
-        id: parsedMessage.id,
-      }));
+      handleMessage(ws, JSON.stringify(parsedMessage));
     } catch (error) {
       console.error('Error parsing message:', error);
       ws.send(JSON.stringify({
@@ -34,7 +32,7 @@ wss.on('connection', (ws: WebSocket) => {
   });
 
   ws.on('error', (error) => {
-    console.error('WebSocket error:', error);
+    console.error('WebSocket (server) error:', error);
   });
 });
 
