@@ -1,4 +1,4 @@
-// src/model/game.ts
+import { AttackStatus, ShipSize } from '../constants.js';
 import { Message } from './message.js';
 
 export interface Ship {
@@ -8,7 +8,7 @@ export interface Ship {
   };
   direction: boolean;
   length: number;
-  type: 'small' | 'medium' | 'large' | 'huge';
+  type: ShipSize;
 }
 
 export interface Game {
@@ -46,5 +46,70 @@ export class StartGameResponse implements Message {
 
   constructor(ships: Ship[], currentPlayerIndex: number | string) {
     this.data = { ships, currentPlayerIndex };
+  }
+}
+
+export class AttackRequest implements Message {
+  type = 'attack';
+  data: {
+    gameId: number | string,
+    x: number;
+    y: number;
+    indexPlayer: number | string;
+  };
+  id = 0;
+
+  constructor(gameId: number | string, x: number, y: number, indexPlayer: number | string) {
+    this.data = {
+      gameId,
+      x,
+      y,
+      indexPlayer,
+    };
+  }
+}
+
+export class AttackResponse implements Message {
+  type = 'attack';
+  data: {
+    position: {
+      x: number;
+      y: number;
+    };
+    currentPlayer: number | string;
+    status: AttackStatus;
+  };
+  id = 0;
+
+  constructor(x: number, y: number, currentPlayer: number | string, status: AttackStatus) {
+    this.data = {
+      position: { x, y },
+      currentPlayer,
+      status,
+    };
+  }
+}
+
+export class TurnRequest implements Message {
+  type = 'turn';
+  data: {
+    currentPlayer: number | string;
+  };
+  id = 0;
+
+  constructor(currentPlayer: number | string) {
+    this.data = { currentPlayer };
+  }
+}
+
+export class FinishRequest implements Message {
+  type = 'finish';
+  data: {
+    winPlayer: number | string;
+  };
+  id = 0;
+
+  constructor(winPlayer: number | string) {
+    this.data = { winPlayer };
   }
 }
