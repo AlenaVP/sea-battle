@@ -28,6 +28,19 @@ export class RegistrationResponse implements Message {
   }
 }
 
+export class UpdateWinnersResponse implements Message {
+  type = 'update_winners';
+  data: {
+    name: string;
+    wins: number;
+  }[];
+  id = 0;
+
+  constructor(winners: { name: string; wins: number }[]) {
+    this.data = winners;
+  }
+}
+
 export class CreateRoomRequest implements Message {
   type: string = 'create_room';
   data: string = '';
@@ -72,6 +85,7 @@ export class UpdateRoomResponse implements Message {
 export interface Player {
   name: string;
   password: string;
+  wins?: number;
 }
 
 export interface AddPlayerResult {

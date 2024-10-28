@@ -12,6 +12,7 @@ import {
   TurnRequest
 } from '../../model/game.js';
 import { areAllPlayersReady, isGameOver, isShipSunk, markSurroundingCells, sendErrorMessage, sendResponse } from '../../utils.js';
+import { UpdateWinnersResponse } from '../../model/registration.js';
 
 export const handleAddShips = (ws: CustomWebSocket, message: AddShipsToGameBoardRequest): void => {
   const { gameId, ships, indexPlayer } = message.data;
@@ -177,6 +178,22 @@ const sendFinishMessage = (gameId: string | number, winPlayer: string | number) 
     if (client) {
       sendResponse(client, finishMessage);
     }
+  });
+
+  updateWinnersTable(winPlayer);
+};
+
+const updateWinnersTable = (winPlayer: string | number) => {
+  const player = db.getPlayer(String(winPlayer));
+  if (!player) return;
+
+  player.wins = (player.wins || 0) + 1;
+
+  const winners = db.getAllPlayers().map(p => ({ name: p.name, wins: p.wins || 0 }));
+  const updateWinnersResponse = new UpdateWinnersResponse(winners);
+
+  db.getAllClients().forEach(client => {
+    sendResponse(client, updateWinnersResponse);
   });
 };
 
