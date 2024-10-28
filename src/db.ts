@@ -1,15 +1,16 @@
-import { WebSocket } from 'ws';
-
+import { Game, Ship } from './model/game.js';
 import { AddPlayerResult, Player, Room } from './model/registration.js';
 import { CustomWebSocket } from './types.js';
 
-const clients: WebSocket[] = [];
+const clients: CustomWebSocket[] = [];
+const games = new Map<string, Game>();
 const players = new Map<string, Player>();
 const rooms = new Map<string, Room>();
 
 export const db = {
   players,
   rooms,
+  games,
 
   addClient: (client: CustomWebSocket): void => {
     clients.push(client);
@@ -62,5 +63,20 @@ export const db = {
 
   addPlayerToRoom: (room: Room, playerName: string): void => {
     room?.roomUsers.push({ name: playerName, index: playerName });
+  },
+
+  // Ship
+
+  // Game
+  addGame: (game: Game): void => {
+    games.set(String(game.gameId), game);
+  },
+
+  getGame: (id: string | number): Game | undefined => {
+    return games.get(String(id));
+  },
+
+  getAllGames: (): Game[] => {
+    return Array.from(games.values());
   },
 };
