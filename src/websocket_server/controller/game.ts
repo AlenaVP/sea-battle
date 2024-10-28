@@ -2,6 +2,7 @@ import { CustomWebSocket } from '../../types.js';
 import { db } from '../../db.js';
 import { AddShipsToGameBoardRequest, AttackFeedback, FinishGame, Game, Ship, StartGameResponse, TurnInfo } from '../../model/game.js';
 import { areAllPlayersReady, sendErrorMessage, sendResponse } from '../../utils.js';
+import { UpdateWinnersResponse } from '../../model/registration.js';
 
 export const handleAddShips = (ws: CustomWebSocket, message: AddShipsToGameBoardRequest): void => {
   const { gameId, ships, indexPlayer } = message.data;
@@ -119,6 +120,20 @@ export const handleAttack = (ws: CustomWebSocket, message: any): void => {
   sendTurnMessage(gameId, opponentIndex);
 };
 
+const updateWinnersTable = (winPlayer: string | number) => {
+  const player = db.getPlayer(String(winPlayer));
+  if (!player) return;
+
+  player.wins = (player.wins || 0) + 1;
+
+  const winners = db.getAllPlayers().map(p => ({ name: p.name, wins: p.wins || 0 }));
+  const updateWinnersResponse = new UpdateWinnersResponse(winners);
+
+  db.getAllClients().forEach(client => {
+    sendResponse(client, updateWinnersResponse);
+  });
+};
+
 const sendAttackFeedback = (gameId: string | number, x: number, y: number, currentPlayer: string | number, status: 'miss' | 'killed' | 'shot') => {
   const game = db.getGame(gameId);
   if (!game) return;
@@ -159,6 +174,8 @@ const sendFinishMessage = (gameId: string | number, winPlayer: string | number) 
       sendResponse(client, finishMessage);
     }
   });
+
+  updateWinnersTable(winPlayer);
 };
 
 const isShipSunk = (board: number[][], x: number, y: number): boolean => {
