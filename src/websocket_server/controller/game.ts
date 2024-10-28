@@ -101,6 +101,11 @@ export const handleAttack = (ws: CustomWebSocket, message: AttackRequest): void 
     return;
   }
 
+  if (game.currentPlayerIndex !== indexPlayer) {
+    sendErrorMessage(ws, message.id, 'Not your turn');
+    return;
+  }
+
   const opponentIndex = Object.keys(game.players).find(key => key !== indexPlayer);
   if (!opponentIndex) {
     sendErrorMessage(ws, message.id, 'Opponent not found');
@@ -126,10 +131,9 @@ export const handleAttack = (ws: CustomWebSocket, message: AttackRequest): void 
     board[x][y] = 3;
     console.log(`The ${indexPlayer} has missed. 🥛`);
     sendAttackFeedback(gameId, x, y, indexPlayer, AttackStatus.MISS);
+    game.currentPlayerIndex = opponentIndex;
+    sendTurnMessage(gameId, opponentIndex);
   }
-
-  game.currentPlayerIndex = opponentIndex;
-  sendTurnMessage(gameId, opponentIndex);
 };
 
 const sendAttackFeedback = (gameId: string | number, x: number, y: number, currentPlayer: string | number, status: AttackStatus) => {
@@ -151,7 +155,7 @@ const sendTurnMessage = (gameId: string | number, currentPlayer: string | number
   if (!game) return;
 
   const turnMessage = new TurnRequest(currentPlayer);
-  console.log(`The turn goes.`);
+  console.log(`The turn goes to player: ${currentPlayer}.`);
 
   Object.keys(game.players).forEach(playerIndex => {
     const client = db.getAllClients().find(c => c.playerName === playerIndex);
