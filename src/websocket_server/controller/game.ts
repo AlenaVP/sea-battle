@@ -11,7 +11,7 @@ import {
   StartGameResponse,
   TurnRequest
 } from '../../model/game.js';
-import { areAllPlayersReady, sendErrorMessage, sendResponse } from '../../utils.js';
+import { areAllPlayersReady, isGameOver, isShipSunk, markSurroundingCells, sendErrorMessage, sendResponse } from '../../utils.js';
 
 export const handleAddShips = (ws: CustomWebSocket, message: AddShipsToGameBoardRequest): void => {
   const { gameId, ships, indexPlayer } = message.data;
@@ -178,20 +178,6 @@ const sendFinishMessage = (gameId: string | number, winPlayer: string | number) 
       sendResponse(client, finishMessage);
     }
   });
-};
-
-const isShipSunk = (board: number[][], x: number, y: number): boolean => {
-  // Implement logic to check if the ship is sunk
-  return true; // Placeholder
-};
-
-const markSurroundingCells = (board: number[][], x: number, y: number): void => {
-  // Implement logic to mark surrounding cells as miss
-};
-
-const isGameOver = (board: number[][]): boolean => {
-  // Implement logic to check if the game is over
-  return false; // Placeholder
 };
 
 export const handleRandomAttack = (ws: CustomWebSocket, message:  AttackRequest): void => {
